@@ -1,54 +1,27 @@
+# dijkstra.py
 import heapq
 
-def dijkstra(graph, start, end):
-    distances = {node: float('inf') for node in graph}
-    distances[start] = 0
-
-    previous_nodes = {node: None for node in graph}
-
-    queue = [(0, start)]
-
-    while queue:
-        current_distance, current_node = heapq.heappop(queue)
-
-        if current_distance > distances[current_node]:
-            continue
-
-        for neighbor, weight in graph[current_node].items():
-            distance = current_distance + weight
-
-            if distance < distances[neighbor]:
-                distances[neighbor] = distance
-                previous_nodes[neighbor] = current_node
-                heapq.heappush(queue, (distance, neighbor))
-
-    path = []
-    current = end
-    while current:
-        path.insert(0, current)
-        current = previous_nodes[current]
-
-    return path, distances[end] if distances[end] != float('inf') else None
-
-
 def get_valid_points(graph):
-    excluidos = {"corredor", "escada", "rampa", "hall"}
-    return [node for node in graph if not any(x in node.lower() for x in excluidos)]
+    return list(graph.keys())
 
+def dijkstra(grafo, inicio, destino):
+    fila = [(0, inicio, [])]
+    visitados = set()
 
-if __name__ == "__main__":
-    from pprint import pprint
-    from graph import campus_graph
+    while fila:
+        distancia_atual, no_atual, caminho = heapq.heappop(fila)
 
-    pontos_disponiveis = get_valid_points(campus_graph)
-    print("Pontos disponíveis para seleção:")
-    pprint(pontos_disponiveis)
+        if no_atual in visitados:
+            continue
+        visitados.add(no_atual)
 
-    origem = "Entrada Frontal"
-    destino = "Sala 305"
+        if no_atual == destino:
+            return caminho + [(no_atual, None, 0)], distancia_atual
 
-    caminho, distancia = dijkstra(campus_graph, origem, destino)
+        for vizinho, dados in grafo.get(no_atual, {}).items():
+            if vizinho not in visitados:
+                nova_distancia = distancia_atual + dados["distancia"]
+                nova_rota = caminho + [(no_atual, dados["direcao"], dados["distancia"])]
+                heapq.heappush(fila, (nova_distancia, vizinho, nova_rota))
 
-    print(f"\nMenor caminho de {origem} até {destino}:")
-    print(" -> ".join(caminho))
-    print(f"Distância total: {distancia}")
+    return None, float("inf")
