@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Button, ScrollView, Alert } from 'react-native';
-import { Text, Card } from 'react-native-paper';
+import { View, StyleSheet, ScrollView, Alert, Modal, TouchableOpacity, FlatList, TouchableWithoutFeedback } from 'react-native';
+import { Text, Card, Divider, TextInput, Button } from 'react-native-paper';
 import api from '../services/api';
-import { Picker } from '@react-native-picker/picker';
 
 type Ponto = string;
 
@@ -31,6 +30,65 @@ const pontos: Ponto[] = [
   'Lanchonete', 'WebClass'
 ];
 
+const CustomSelect = ({
+  value,
+  items,
+  placeholder,
+  onSelect,
+}: {
+  value: string;
+  items: string[];
+  placeholder: string;
+  onSelect: (item: string) => void;
+}) => {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <>
+      <TouchableOpacity onPress={() => setVisible(true)}>
+        <TextInput
+          mode="outlined"
+          value={value}
+          placeholder={placeholder}
+          editable={false}
+          right={<TextInput.Icon icon="chevron-down" />}
+          style={styles.selectInput}
+        />
+      </TouchableOpacity>
+
+      <Modal
+        visible={visible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setVisible(false)}>
+        <TouchableWithoutFeedback onPress={() => setVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalContent}>
+                <FlatList
+                  data={items}
+                  keyExtractor={(item) => item}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={styles.selectItem}
+                      onPress={() => {
+                        onSelect(item);
+                        setVisible(false);
+                      }}>
+                      <Text>{item}</Text>
+                    </TouchableOpacity>
+                  )}
+                  ItemSeparatorComponent={() => <Divider />}
+                />
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+    </>
+  );
+};
+
 export default function Home() {
   const [origem, setOrigem] = useState<Ponto>('');
   const [destino, setDestino] = useState<Ponto>('');
@@ -40,7 +98,7 @@ export default function Home() {
 
   const buscarCaminho = async () => {
     if (!origem || !destino) return;
-    
+
     setLoading(true);
     try {
       const response = await api.get<CaminhoResponse>('/caminho', {
@@ -60,10 +118,10 @@ export default function Home() {
   const parsePasso = (passo: string): Passo => {
     const match = passo.match(/Vá de \((.*?)\) até \((.*?)\)/);
     if (!match) return { from: '', direction: '', distance: 0, to: '' };
-    
+
     const [from, direction, distance] = match[1].split(',').map(s => s.trim().replace(/'/g, ''));
     const to = match[2].split(',')[0].trim().replace(/'/g, '');
-    
+
     return {
       from,
       direction: direction || 'siga em frente',
@@ -77,41 +135,37 @@ export default function Home() {
       <Text variant="titleLarge" style={styles.title}>RoomFinder</Text>
       <Text style={styles.subtitle}>Encontre o melhor caminho no campus</Text>
 
-      <Picker
-        selectedValue={origem}
-        onValueChange={(itemValue: Ponto) => setOrigem(itemValue)}
-        style={styles.picker}
-      >
-        <Picker.Item label="Selecione a origem" value="" />
-        {pontos.map((ponto) => (
-          <Picker.Item key={ponto} label={ponto} value={ponto} />
-        ))}
-      </Picker>
+      <CustomSelect
+        value={origem}
+        items={pontos}
+        placeholder="Selecione a origem"
+        onSelect={(item) => setOrigem(item)}
+      />
 
-      <Picker
-        selectedValue={destino}
-        onValueChange={(itemValue: Ponto) => setDestino(itemValue)}
-        style={styles.picker}
-      >
-        <Picker.Item label="Selecione o destino" value="" />
-        {pontos.map((ponto) => (
-          <Picker.Item key={ponto} label={ponto} value={ponto} />
-        ))}
-      </Picker>
+      <CustomSelect
+        value={destino}
+        items={pontos}
+        placeholder="Selecione o destino"
+        onSelect={(item) => setDestino(item)}
+      />
 
       <Button 
-        title={loading ? "Buscando..." : "Buscar caminho"} 
-        onPress={buscarCaminho} 
+        mode="contained" 
+        onPress={buscarCaminho}
         disabled={!origem || !destino || loading}
-        color="#6200ee"
-      />
+        loading={loading}
+        style={styles.buscarButton}
+        labelStyle={styles.buscarButtonLabel}
+      >
+        {loading ? "Buscando..." : "Buscar caminho"}
+      </Button>
 
       {mostrarCaminho && caminho && (
         <Card style={styles.card}>
-          <Card.Title 
-            title="Caminho Encontrado" 
+          <Card.Title
+            title="Caminho Encontrado"
             titleStyle={styles.cardTitle}
-            subtitle={`Distância total: ${caminho.distancia_total}`} 
+            subtitle={`Distância total: ${caminho.distancia_total}`}
             subtitleStyle={styles.cardSubtitle}
           />
           <Card.Content>
@@ -204,5 +258,32 @@ const styles = StyleSheet.create({
   direcao: {
     color: '#6200ee',
     textTransform: 'lowercase',
+  },
+  selectInput: {
+    backgroundColor: 'white',
+    marginVertical: 10,
+  },
+modalOverlay: {
+  flex: 1,
+  justifyContent: 'center',
+  backgroundColor: 'rgba(0,0,0,0.5)',
+  width: '100%', 
+  height: '100%', 
+},
+  modalContent: {
+    backgroundColor: 'white',
+    marginHorizontal: 20,
+    borderRadius: 8,
+    maxHeight: '60%',
+  },
+  selectItem: {
+    padding: 15,
+  },
+    buscarButton: {
+    marginTop: 10,
+    backgroundColor: '#6200ee',
+  },
+  buscarButtonLabel: {
+    color: 'white',
   },
 });
