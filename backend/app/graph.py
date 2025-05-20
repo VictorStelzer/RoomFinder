@@ -122,5 +122,5 @@ campus_graph = {
     "Sala306": {"Corredor3A": {"distancia": 3, "direcao": "atrás"}},
     "Banheiro3A": {"Corredor3A": {"distancia": 2, "direcao": "volte"}},
     "Banheiro3B": {"Corredor3B": {"distancia": 2, "direcao": "volte"}},
-    "WebClass": {"Hall 3": {"distancia": 4, "direcao": "atrás"}}
+    "WebClass": {"Hall3": {"distancia": 4, "direcao": "atrás"}}
 }

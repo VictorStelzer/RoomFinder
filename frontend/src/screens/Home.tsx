@@ -1,53 +1,208 @@
 import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
-import { Text } from 'react-native-paper';
+import { View, StyleSheet, Button, ScrollView, Alert } from 'react-native';
+import { Text, Card } from 'react-native-paper';
+import api from '../services/api';
+import { Picker } from '@react-native-picker/picker';
 
-const pontos = [
-  'Entrada Frente', 'Entrada Trás',
-  '101', '102', '103', '104', '105', '106',
-  '201', '202', '203', '204', '205', '206',
-  '301', '302', '303', '304', '305', '306',
-  'Banheiro 1', 'Banheiro 2',
-  'Lanchonete', 'Web Class'
+type Ponto = string;
+
+type Passo = {
+  from: string;
+  direction: string;
+  distance: number;
+  to: string;
+};
+
+type CaminhoResponse = {
+  caminho_formatado: string[];
+  distancia_total: string;
+  detalhes: {
+    caminho: Array<[string, string | null, number]>;
+    distancia: number;
+  };
+};
+
+const pontos: Ponto[] = [
+  'EntradaFrontal', 'EntradaTraseira',
+  'Sala101', 'Sala102', 'Sala103', 'Sala104', 'Sala105', 'Sala106',
+  'Sala201', 'Sala202', 'Sala203', 'Sala204', 'Sala205', 'Sala206',
+  'Sala301', 'Sala302', 'Sala303', 'Sala304', 'Sala305', 'Sala306',
+  'Banheiro1A', 'Banheiro1B', 'Banheiro2A', 'Banheiro2B',
+  'Lanchonete', 'WebClass'
 ];
 
 export default function Home() {
-  const [origem, setOrigem] = useState('');
-  const [destino, setDestino] = useState('');
+  const [origem, setOrigem] = useState<Ponto>('');
+  const [destino, setDestino] = useState<Ponto>('');
+  const [caminho, setCaminho] = useState<CaminhoResponse | null>(null);
+  const [mostrarCaminho, setMostrarCaminho] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const buscarCaminho = async () => {
+    if (!origem || !destino) return;
+    
+    setLoading(true);
+    try {
+      const response = await api.get<CaminhoResponse>('/caminho', {
+        params: { origem, destino },
+      });
+      setCaminho(response.data);
+      setMostrarCaminho(true);
+    } catch (error) {
+      console.error('Erro:', error);
+      Alert.alert('Erro', 'Não foi possível encontrar o caminho. Verifique os pontos selecionados.');
+      setMostrarCaminho(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const parsePasso = (passo: string): Passo => {
+    const match = passo.match(/Vá de \((.*?)\) até \((.*?)\)/);
+    if (!match) return { from: '', direction: '', distance: 0, to: '' };
+    
+    const [from, direction, distance] = match[1].split(',').map(s => s.trim().replace(/'/g, ''));
+    const to = match[2].split(',')[0].trim().replace(/'/g, '');
+    
+    return {
+      from,
+      direction: direction || 'siga em frente',
+      distance: parseInt(distance) || 0,
+      to
+    };
+  };
 
   return (
-    <View style={styles.container}>
-      <Text variant="titleLarge">Escolha os pontos:</Text>
-{/* 
-      <Select
-        data={pontos}
-        onSelect={(selectedItem) => setOrigem(selectedItem)}
-        defaultButtonText="Ponto de Origem"
-        buttonStyle={styles.dropdown}
+    <ScrollView style={styles.container}>
+      <Text variant="titleLarge" style={styles.title}>RoomFinder</Text>
+      <Text style={styles.subtitle}>Encontre o melhor caminho no campus</Text>
+
+      <Picker
+        selectedValue={origem}
+        onValueChange={(itemValue: Ponto) => setOrigem(itemValue)}
+        style={styles.picker}
+      >
+        <Picker.Item label="Selecione a origem" value="" />
+        {pontos.map((ponto) => (
+          <Picker.Item key={ponto} label={ponto} value={ponto} />
+        ))}
+      </Picker>
+
+      <Picker
+        selectedValue={destino}
+        onValueChange={(itemValue: Ponto) => setDestino(itemValue)}
+        style={styles.picker}
+      >
+        <Picker.Item label="Selecione o destino" value="" />
+        {pontos.map((ponto) => (
+          <Picker.Item key={ponto} label={ponto} value={ponto} />
+        ))}
+      </Picker>
+
+      <Button 
+        title={loading ? "Buscando..." : "Buscar caminho"} 
+        onPress={buscarCaminho} 
+        disabled={!origem || !destino || loading}
+        color="#6200ee"
       />
 
-      <Select
-        data={pontos}
-        onSelect={(selectedItem) => setDestino(selectedItem)}
-        defaultButtonText="Ponto de Destino"
-        buttonStyle={styles.dropdown}
-      /> */}
-
-      <Text variant="bodyLarge">Origem: {origem}</Text>
-      <Text variant="bodyLarge">Destino: {destino}</Text>
-    </View>
+      {mostrarCaminho && caminho && (
+        <Card style={styles.card}>
+          <Card.Title 
+            title="Caminho Encontrado" 
+            titleStyle={styles.cardTitle}
+            subtitle={`Distância total: ${caminho.distancia_total}`} 
+            subtitleStyle={styles.cardSubtitle}
+          />
+          <Card.Content>
+            <ScrollView style={styles.scrollView}>
+              {caminho.caminho_formatado.map((passo, index) => {
+                const { from, direction, distance, to } = parsePasso(passo);
+                return (
+                  <View key={index} style={styles.passoContainer}>
+                    <Text style={styles.passoNumero}>{index + 1}.</Text>
+                    <View style={styles.passoContent}>
+                      <Text style={styles.passoTexto}>
+                        De <Text style={styles.local}>{from}</Text>
+                      </Text>
+                      <Text style={styles.passoTexto}>
+                        Vire <Text style={styles.direcao}>{direction.toLowerCase()}</Text> ({distance}m)
+                      </Text>
+                      <Text style={styles.passoTexto}>
+                        Para <Text style={styles.local}>{to}</Text>
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </ScrollView>
+          </Card.Content>
+        </Card>
+      )}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
-    justifyContent: 'center',
+    padding: 20,
+    backgroundColor: '#f5f5f5',
   },
-  dropdown: {
-    width: '100%',
+  title: {
+    textAlign: 'center',
+    marginBottom: 5,
+    color: '#6200ee',
+    fontWeight: 'bold',
+  },
+  subtitle: {
+    textAlign: 'center',
+    marginBottom: 20,
+    color: '#666',
+  },
+  picker: {
+    backgroundColor: 'white',
     marginVertical: 10,
+    borderRadius: 5,
+  },
+  card: {
+    marginTop: 20,
+    elevation: 3,
     borderRadius: 8,
+  },
+  cardTitle: {
+    fontWeight: 'bold',
+  },
+  cardSubtitle: {
+    color: '#6200ee',
+  },
+  scrollView: {
+    maxHeight: 300,
+  },
+  passoContainer: {
+    flexDirection: 'row',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  passoNumero: {
+    fontWeight: 'bold',
+    marginRight: 8,
+    color: '#6200ee',
+  },
+  passoContent: {
+    flex: 1,
+  },
+  passoTexto: {
+    marginBottom: 2,
+    color: '#333',
+  },
+  local: {
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  direcao: {
+    color: '#6200ee',
+    textTransform: 'lowercase',
   },
 });

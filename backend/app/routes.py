@@ -31,14 +31,12 @@ def caminho():
     caminho, distancia = dijkstra(campus_graph, origem, destino)
 
     if caminho:
-        # Format the path with directions
         formatted_path = []
-        for i, step in enumerate(caminho[:-1]):
-            current_node, direction, distance = step
-            next_node = caminho[i+1][0]
-            if direction:
-                formatted_path.append(f"{i+1}. Vá para {next_node} ({direction}, {distance}m)")
-        
+        for i in range(len(caminho) - 1):
+            step_from = caminho[i]
+            step_to = caminho[i + 1]
+            formatted_path.append(f"{i+1}. Vá de {step_from} até {step_to}")
+
         return jsonify({
             "caminho_formatado": formatted_path,
             "distancia_total": f"{distancia} metros",
