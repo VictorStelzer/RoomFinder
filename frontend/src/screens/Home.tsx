@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, Alert, Modal, TouchableOpacity, FlatList, TouchableWithoutFeedback } from 'react-native';
-import { Text, Card, Divider, TextInput, Button } from 'react-native-paper';
+import { Text, Card, Divider, TextInput, Button, Checkbox } from 'react-native-paper';
 import api from '../services/api';
 
 type Ponto = string;
@@ -95,6 +95,7 @@ export default function Home() {
   const [caminho, setCaminho] = useState<CaminhoResponse | null>(null);
   const [mostrarCaminho, setMostrarCaminho] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
+  const [acessibilidade, setAcessibilidade] = useState<boolean>(false);
 
   const buscarCaminho = async () => {
     if (!origem || !destino) return;
@@ -102,7 +103,11 @@ export default function Home() {
     setLoading(true);
     try {
       const response = await api.get<CaminhoResponse>('/caminho', {
-        params: { origem, destino },
+        params: { 
+          origem, 
+          destino,
+          acessibilidade: acessibilidade ? 'true' : undefined
+        },
       });
       setCaminho(response.data);
       setMostrarCaminho(true);
@@ -148,6 +153,15 @@ export default function Home() {
         placeholder="Selecione o destino"
         onSelect={(item) => setDestino(item)}
       />
+
+      <View style={styles.checkboxContainer}>
+        <Checkbox
+          status={acessibilidade ? 'checked' : 'unchecked'}
+          onPress={() => setAcessibilidade(!acessibilidade)}
+          color="#6200ee"
+        />
+        <Text style={styles.checkboxLabel}>Preciso de rota acessível (usar rampa)</Text>
+      </View>
 
       <Button 
         mode="contained" 
@@ -263,13 +277,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     marginVertical: 10,
   },
-modalOverlay: {
-  flex: 1,
-  justifyContent: 'center',
-  backgroundColor: 'rgba(0,0,0,0.5)',
-  width: '100%', 
-  height: '100%', 
-},
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    width: '100%', 
+    height: '100%', 
+  },
   modalContent: {
     backgroundColor: 'white',
     marginHorizontal: 20,
@@ -279,11 +293,20 @@ modalOverlay: {
   selectItem: {
     padding: 15,
   },
-    buscarButton: {
+  buscarButton: {
     marginTop: 10,
     backgroundColor: '#6200ee',
   },
   buscarButtonLabel: {
     color: 'white',
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 10,
+  },
+  checkboxLabel: {
+    marginLeft: 8,
+    color: '#333',
   },
 });

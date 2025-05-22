@@ -1,7 +1,6 @@
-# routes.py
 from flask import Blueprint, jsonify, request
 from .dijkstra import dijkstra, get_valid_points
-from .graph import campus_graph
+from .graph import campus_graph, campus_graph_acessivel
 
 bp = Blueprint('routes', __name__)
 
@@ -24,11 +23,15 @@ def pontos():
 def caminho():
     origem = request.args.get('origem')
     destino = request.args.get('destino')
+    acessibilidade = request.args.get('acessibilidade', 'false').lower() == 'true'
 
     if not origem or not destino:
         return jsonify({"erro": "Parâmetros 'origem' e 'destino' são obrigatórios"}), 400
 
-    caminho, distancia = dijkstra(campus_graph, origem, destino)
+    # Usa o grafo acessível se o parâmetro for true, senão usa o normal
+    grafo = campus_graph_acessivel if acessibilidade else campus_graph
+    
+    caminho, distancia = dijkstra(grafo, origem, destino)
 
     if caminho:
         formatted_path = []
